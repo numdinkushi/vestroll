@@ -98,6 +98,15 @@ export const fiatProviderEnum = pgEnum("fiat_provider", [
   "monnify",
   "flutterwave",
 ]);
+export const bankAccountStatusEnum = pgEnum("bank_account_status", [
+  "pending",
+  "verified",
+  "disconnected",
+]);
+export const bankConnectionProviderEnum = pgEnum("bank_connection_provider", [
+  "paystack",
+  "stripe",
+]);
 
 export const invitationRoleEnum = pgEnum("invitation_role", [
   "admin",
@@ -399,6 +408,40 @@ export const organizationWallets = pgTable("organization_wallets", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const bankAccounts = pgTable(
+  "bank_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .references(() => organizations.id, { onDelete: "cascade" })
+      .notNull(),
+    provider: bankConnectionProviderEnum("provider").notNull(),
+    providerAccountId: varchar("provider_account_id", { length: 255 })
+      .notNull()
+      .unique(),
+    accountNumber: varchar("account_number", { length: 255 }),
+    bankName: varchar("bank_name", { length: 255 }),
+    accountHolderName: varchar("account_holder_name", { length: 255 }),
+    status: bankAccountStatusEnum("status").default("pending").notNull(),
+    verifiedAt: timestamp("verified_at"),
+    disconnectedAt: timestamp("disconnected_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("bank_accounts_organization_id_idx").on(table.organizationId),
+    index("bank_accounts_provider_account_id_idx").on(table.providerAccountId),
+    index("bank_accounts_status_idx").on(table.status),
+  ],
+);
+
+export const bankAccountRelations = relations(bankAccounts, (helpers: any) => ({
+  organization: helpers.one(organizations, {
+    fields: [bankAccounts.organizationId],
+    references: [organizations.id],
+  }),
+}));
 
 export const organizationFiatBalances = pgTable("organization_fiat_balances", {
   id: uuid("id").primaryKey().defaultRandom(),
