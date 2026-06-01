@@ -23,13 +23,15 @@ export const UpdateTimeOffStatusBodySchema = z
     "Request body for an HR manager or admin to approve or reject a pending time-off request.",
   );
 
-export type UpdateTimeOffStatusBody = z.infer<typeof UpdateTimeOffStatusBodySchema>;
+export type UpdateTimeOffStatusBody = z.infer<
+  typeof UpdateTimeOffStatusBodySchema
+>;
 
 export const TimeOffRequestSchema = z
   .object({
     employeeId: z
       .string()
-      .uuid("Invalid employee ID")
+      .min(1, "Invalid employee ID")
       .optional()
       .describe(
         "UUID of the employee submitting the time-off request. Optional when the authenticated user is submitting on their own behalf; required when an admin creates a request on behalf of another employee.",

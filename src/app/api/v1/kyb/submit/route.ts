@@ -2,7 +2,10 @@ import { NextRequest } from "next/server";
 import { ApiResponse } from "@/server/utils/api-response";
 import { AppError, ValidationError } from "@/server/utils/errors";
 import { AuthUtils } from "@/server/utils/auth";
-import { KybSubmitSchema, KYB_FILE_CONSTRAINTS } from "@/server/validations/kyb.schema";
+import {
+  KybSubmitSchema,
+  KYB_FILE_CONSTRAINTS,
+} from "@/server/validations/kyb.schema";
 import { KybService } from "@/server/services/kyb.service";
 import { KybUploadService } from "@/server/services/kyb-upload.service";
 import { ZodError } from "zod";
@@ -72,13 +75,13 @@ export const POST = withKybRateLimit(async (req: NextRequest) => {
     });
 
     if (!incorporationCertificatePath) {
-      throw new ValidationError("Incorporation certificate path is required", {
+      throw new ValidationError("Validation failed", {
         fieldErrors: { incorporationCertificatePath: "Path is required" },
       });
     }
 
     if (!memorandumArticlePath) {
-      throw new ValidationError("Memorandum & Article of Association path is required", {
+      throw new ValidationError("Validation failed", {
         fieldErrors: { memorandumArticlePath: "Path is required" },
       });
     }
@@ -88,16 +91,25 @@ export const POST = withKybRateLimit(async (req: NextRequest) => {
       registrationType: validatedFields.registrationType,
       registrationNo: validatedFields.registrationNo,
       incorporationCertificatePath: incorporationCertificatePath,
-      incorporationCertificateUrl: KybUploadService.getPublicUrl(incorporationCertificatePath),
+      incorporationCertificateUrl: KybUploadService.getPublicUrl(
+        incorporationCertificatePath,
+      ),
       memorandumArticlePath: memorandumArticlePath,
-      memorandumArticleUrl: KybUploadService.getPublicUrl(memorandumArticlePath),
+      memorandumArticleUrl: KybUploadService.getPublicUrl(
+        memorandumArticlePath,
+      ),
       formC02C07Path: formC02C07Path ?? null,
-      formC02C07Url: formC02C07Path ? KybUploadService.getPublicUrl(formC02C07Path) : null,
+      formC02C07Url: formC02C07Path
+        ? KybUploadService.getPublicUrl(formC02C07Path)
+        : null,
     });
 
-    return ApiResponse.success(result, "KYB documents submitted successfully", 201);
+    return ApiResponse.success(
+      result,
+      "KYB documents submitted successfully",
+      201,
+    );
   } catch (error) {
-
     if (error instanceof ZodError) {
       const fieldErrors: Record<string, string> = {};
       error.issues.forEach((issue: any) => {
@@ -114,5 +126,5 @@ export const POST = withKybRateLimit(async (req: NextRequest) => {
 
     console.error("[KYB Submit Error]", error);
     return ApiResponse.error("Internal server error", 500);
-}
+  }
 });
