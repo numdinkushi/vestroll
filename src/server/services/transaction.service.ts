@@ -130,7 +130,7 @@ export class TransactionService {
   static async listTransactions(
     filters: ListTransactionsInput
   ): Promise<PaginatedResponse<Transaction>> {
-    const { page, limit, asset, status, type } = filters;
+    const { page, limit, asset, status, type, sortBy, order } = filters;
 
     let filtered = [...mockTransactions];
 
@@ -150,10 +150,24 @@ export class TransactionService {
       );
     }
 
-    filtered.sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+    const direction = order === "asc" ? 1 : -1;
+    filtered.sort((a, b) => {
+      let comparison: number;
+      switch (sortBy) {
+        case "status":
+          comparison = (a.status ?? "").localeCompare(b.status ?? "");
+          break;
+        case "type":
+          comparison = (a.type ?? "").localeCompare(b.type ?? "");
+          break;
+        case "date":
+        default:
+          comparison =
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+          break;
+      }
+      return comparison * direction;
+    });
 
     const total = filtered.length;
     const start = (page - 1) * limit;

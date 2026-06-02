@@ -1,5 +1,5 @@
 import { db, organizationWallets, organizationFiatBalances } from "@/server/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { BadRequestError } from "@/server/utils/errors";
 
 const VIRTUAL_BANK_NAMES = [
@@ -44,13 +44,13 @@ function generateVirtualAccountNumber() {
 const MOCK_XLM_TO_NGN_RATE = 1500.50;
 
 export class FinanceWalletService {
-  
+
   static convertXlmToNgn(xlmAmount: number): bigint {
     const ngnValue = xlmAmount * MOCK_XLM_TO_NGN_RATE;
-    return BigInt(Math.round(ngnValue * 100)); 
+    return BigInt(Math.round(ngnValue * 100));
   }
 
-  
+
   static convertNgnToXlm(ngnKoboAmount: bigint): number {
     const ngnValue = Number(ngnKoboAmount) / 100;
     return ngnValue / MOCK_XLM_TO_NGN_RATE;
@@ -110,7 +110,6 @@ export class FinanceWalletService {
     return formatWalletResponse(wallet);
   }
 
-  
   static async getOrganizationFiatBalance(organizationId: string): Promise<bigint> {
     if (!organizationId) {
       throw new BadRequestError("User is not associated with any organization");
@@ -123,5 +122,37 @@ export class FinanceWalletService {
       .limit(1);
 
     return record?.balance ?? BigInt(0);
+  }
+
+  static async updateBalance(
+    organizationId: string,
+    amountInKobo: bigint,
+    tx?: any,
+  ) {
+    const query = db.insert(organizationFiatBalances).values({
+      organizationId,
+      balance: amountInKobo,
+    }).onConflictDoUpdate({
+      target: organizationFiatBalances.organizationId,
+      set: {
+        balance: sql`${organizationFiatBalances.balance} + ${amountInKobo}`,
+      },
+    });
+
+    if (tx) {
+      await tx.insert(organizationFiatBalances)
+        .values({
+          organizationId,
+          balance: amountInKobo,
+        })
+        .onConflictDoUpdate({
+          target: organizationFiatBalances.organizationId,
+          set: {
+            balance: sql`${organizationFiatBalances.balance} + ${amountInKobo}`,
+          },
+        });
+    } else {
+      await query;
+    }
   }
 }

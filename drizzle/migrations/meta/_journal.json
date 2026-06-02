@@ -12,8 +12,15 @@
     {
       "idx": 1,
       "version": "7",
+      "when": 1777132800000,
+      "tag": "0001_add_payroll_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
       "when": 1780314990039,
-      "tag": "0001_add_bank_accounts",
+      "tag": "0002_add_bank_accounts",
       "breakpoints": true
     }
   ]

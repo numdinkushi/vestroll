@@ -46,6 +46,20 @@ import { ListTransactionsSchema } from "@/server/validations/finance.schema";
  *         schema:
  *           type: string
  *         description: Filter by transaction type (e.g., payout, deposit, withdrawal)
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [date, status, type]
+ *           default: date
+ *         description: Field to sort results by
+ *       - in: query
+ *         name: order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort direction (ascending or descending)
  *     responses:
  *       200:
  *         description: Transactions retrieved successfully
@@ -120,6 +134,8 @@ export async function GET(req: NextRequest) {
       asset: searchParams.get("asset") ?? undefined,
       status: searchParams.get("status") ?? undefined,
       type: searchParams.get("type") ?? undefined,
+      sortBy: searchParams.get("sortBy") ?? undefined,
+      order: searchParams.get("order") ?? undefined,
     };
 
     const parsed = ListTransactionsSchema.safeParse(rawParams);

@@ -46,7 +46,6 @@ import { eq } from "drizzle-orm";
  */
 export async function POST(req: NextRequest) {
   try {
-
     const body = await req.json();
     const validatedData = VerifyTwoFactorSchema.parse(body);
 
@@ -77,9 +76,9 @@ export async function POST(req: NextRequest) {
       return ApiResponse.error("User not found", 404);
     }
 
-    const accessToken = AuthUtils.generateToken(user.id, user.email);
+    const accessToken = await AuthUtils.generateToken(user.id, user.email);
 
-    const refreshToken = AuthUtils.generateToken(user.id, user.email);
+    const refreshToken = await AuthUtils.generateToken(user.id, user.email);
 
     return ApiResponse.success(
       {
@@ -99,9 +98,7 @@ export async function POST(req: NextRequest) {
       200,
     );
   } catch (error) {
-
     if (error instanceof AppError) {
-
       if (error.statusCode === 403 || error.statusCode === 429) {
         try {
           const body = await req.clone().json();
@@ -128,9 +125,7 @@ export async function POST(req: NextRequest) {
               }
             }
           }
-        } catch {
-
-        }
+        } catch {}
       }
 
       return ApiResponse.error(error.message, error.statusCode, error.errors);

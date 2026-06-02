@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { employees } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { Logger } from "./logger.service";
 
 export interface BankValidationResult {
@@ -224,13 +224,33 @@ class BankAccountService {
           bankCountry: employees.bankCountry,
         })
         .from(employees)
-        .where(eq(employees.id, employeeId))
+        .where(
+          and(
+            eq(employees.id, employeeId),
+            isNull(employees.bankAccountDeletedAt)
+          )
+        )
         .limit(1);
 
       return employee[0] || null;
     } catch (error) {
       Logger.error("[Get Employee Account Error]", { error: String(error) });
       throw new Error("Failed to retrieve employee account details");
+    }
+  }
+
+  async unlinkBankAccount(employeeId: string): Promise<void> {
+    try {
+      await db
+        .update(employees)
+        .set({
+          bankAccountDeletedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(employees.id, employeeId));
+    } catch (error) {
+      Logger.error("[Unlink Bank Account Error]", { error: String(error) });
+      throw new Error("Failed to unlink bank account");
     }
   }
 

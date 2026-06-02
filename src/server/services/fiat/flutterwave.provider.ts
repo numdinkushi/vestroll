@@ -14,6 +14,8 @@ import type {
   VirtualAccountResult,
   InitializePaymentParams,
   InitializePaymentResult,
+  ChargeParams,
+  ChargeResult,
 } from "./payment-provider.interface";
 
 export interface FlutterwaveConfig {
@@ -58,6 +60,13 @@ interface FlutterwaveInitializePaymentData {
   tx_ref?: string;
   amount?: number;
   currency?: string;
+}
+
+interface FlutterwaveChargeData {
+  id: string | number;
+  status: string;
+  amount: number;
+  fee: number;
 }
 
 async function safeJson<T>(res: Response): Promise<T> {
@@ -257,6 +266,49 @@ export class FlutterwaveProvider implements PaymentProvider {
       status: "initialized",
       amount: data.data.amount ?? params.amount,
       currency: (data.data.currency ?? params.currency) as "NGN",
+    };
+  }
+
+  async charge(params: ChargeParams): Promise<ChargeResult> {
+    const response = await fetch(
+      `${this.config.baseUrl}/v3/charges`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.secretKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tx_ref: params.reference,
+          amount: params.amount,
+          currency: params.currency,
+          payment_method: params.paymentMethodId,
+          customer: {
+            email: params.customerEmail,
+            name: params.customerName,
+          },
+        }),
+      },
+    );
+
+    const data =
+      await safeJson<FlutterwaveApiResponse<FlutterwaveChargeData>>(response);
+
+    if (!response.ok || data.status !== "success") {
+      Logger.error("Flutterwave charge failed", {
+        reference: params.reference,
+        message: data.message,
+      });
+      throw FlutterwaveProvider.mapError(response.status, data.message);
+    }
+
+    return {
+      reference: params.reference,
+      providerReference: String(data.data.id),
+      status: data.data.status === "successful" ? "success" : "failed",
+      amount: data.data.amount,
+      fee: data.data.fee,
+      raw: data,
     };
   }
 

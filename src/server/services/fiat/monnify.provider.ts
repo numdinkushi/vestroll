@@ -14,6 +14,8 @@ import type {
   VirtualAccountResult,
   InitializePaymentParams,
   InitializePaymentResult,
+  ChargeParams,
+  ChargeResult,
 } from "./payment-provider.interface";
 
 export interface MonnifyConfig {
@@ -85,6 +87,17 @@ interface MonnifyInitializePaymentResponse {
   };
 }
 
+interface MonnifyChargeResponse {
+  requestSuccessful: boolean;
+  responseMessage?: string;
+  responseBody: {
+    transactionReference: string;
+    status: string;
+    amount: number;
+    totalFee: number;
+  };
+}
+
 const MONNIFY_STATUS_MAP: Record<string, DisburseResult["status"]> = {
   SUCCESS: "completed",
   PENDING: "pending",
@@ -131,7 +144,7 @@ export class MonnifyProvider implements PaymentProvider {
     }
 
     this.accessToken = data.responseBody.accessToken;
-    
+
     this.tokenExpiresAt =
       Date.now() + (data.responseBody.expiresIn - 60) * 1000;
 
@@ -321,6 +334,49 @@ export class MonnifyProvider implements PaymentProvider {
     };
   }
 
+  async charge(params: ChargeParams): Promise<ChargeResult> {
+    const token = await this.authenticate();
+
+    const response = await fetch(
+      `${this.config.baseUrl}/api/v1/merchant/charge`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentMethodId: params.paymentMethodId,
+          amount: params.amount,
+          paymentReference: params.reference,
+          currencyCode: params.currency,
+          customerName: params.customerName,
+          customerEmail: params.customerEmail,
+        }),
+      }
+    );
+
+    const data: MonnifyChargeResponse = await response.json();
+
+    if (!response.ok || !data.requestSuccessful) {
+      Logger.error("Monnify charge failed", {
+        reference: params.reference,
+        responseMessage: data.responseMessage,
+      });
+      throw MonnifyProvider.mapError(response.status, data.responseMessage);
+    }
+
+    const body = data.responseBody;
+    return {
+      reference: params.reference,
+      providerReference: body.transactionReference,
+      status: body.status === "SUCCESS" ? "success" : "failed",
+      amount: body.amount,
+      fee: body.totalFee,
+      raw: data,
+    };
+  }
+
   private static buildVirtualAccountRequest(
     orgId: string
   ): VirtualAccountRequest {
@@ -359,5 +415,3 @@ export class MonnifyProvider implements PaymentProvider {
     return new InternalServerError(msg);
   }
 }
-
-

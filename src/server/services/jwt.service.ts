@@ -6,9 +6,7 @@ export interface JWTPayload extends jose.JWTPayload {
   email: string;
 }
 
-
 export class JWTService {
-  
   private static normalizeExpiration(expiration: string): string | number {
     const msMatch = expiration.match(/^(\d+)ms$/);
     if (!msMatch) {
@@ -20,11 +18,17 @@ export class JWTService {
   }
 
   private static get ACCESS_SECRET() {
-    const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || "vestroll-fallback-secret";
+    const secret = process.env.JWT_ACCESS_SECRET;
+    if (!secret) {
+      throw new Error("JWT_ACCESS_SECRET is not configured");
+    }
     return new TextEncoder().encode(secret);
   }
   private static get REFRESH_SECRET() {
-    const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "vestroll-fallback-secret";
+    const secret = process.env.JWT_REFRESH_SECRET;
+    if (!secret) {
+      throw new Error("JWT_REFRESH_SECRET is not configured");
+    }
     return new TextEncoder().encode(secret);
   }
   private static get ACCESS_EXPIRATION() {
@@ -34,9 +38,7 @@ export class JWTService {
     return process.env.JWT_REFRESH_EXPIRATION || "7d";
   }
 
-  
   static async generateAccessToken(payload: JWTPayload): Promise<string> {
-
     return await new jose.SignJWT(payload)
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -44,9 +46,7 @@ export class JWTService {
       .sign(this.ACCESS_SECRET);
   }
 
-  
   static async generateRefreshToken(payload: JWTPayload): Promise<string> {
-
     return await new jose.SignJWT(payload)
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -54,9 +54,7 @@ export class JWTService {
       .sign(this.REFRESH_SECRET);
   }
 
-  
   static async verifyAccessToken(token: string): Promise<JWTPayload> {
-
     try {
       const { payload } = await jose.jwtVerify(token, this.ACCESS_SECRET);
       return payload as JWTPayload;
@@ -68,9 +66,7 @@ export class JWTService {
     }
   }
 
-  
   static async verifyRefreshToken(token: string): Promise<JWTPayload> {
-
     try {
       const { payload } = await jose.jwtVerify(token, this.REFRESH_SECRET);
       return payload as JWTPayload;

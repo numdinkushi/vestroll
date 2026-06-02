@@ -17,14 +17,12 @@ export interface HandlerContext<T = any> {
   metadata: RequestMetadata;
 }
 
-
 export function withHandler<T = any>(
   options:
     | { schema?: z.ZodSchema<T> }
     | ((req: NextRequest, ctx: any) => Promise<NextResponse>),
   handler?: (req: NextRequest, ctx: HandlerContext<T>) => Promise<NextResponse>,
 ) {
-  
   if (typeof options === "function") {
     return withHandler({}, options);
   }
@@ -36,7 +34,7 @@ export function withHandler<T = any>(
       const instance = req?.nextUrl?.pathname ?? "unknown";
       const method = req?.method ?? "UNKNOWN";
 
-      Logger.info(`[Request] ${method} ${instance}`);
+      Logger.info?.(`[Request] ${method} ${instance}`);
 
       const metadata: RequestMetadata = {
         ipAddress: AuthUtils.getClientIp(req),
@@ -69,52 +67,51 @@ export function withHandler<T = any>(
       const response = await handler!(req, { ...ctx, body, metadata });
       response.headers.set("X-Response-Id", responseId);
 
-      Logger.info(`[Success] ${method} ${instance}`, {
+      Logger.info?.(`[Success] ${method} ${instance}`, {
         responseId,
         status: response.status,
       });
 
       return response;
-     } catch (error) {
-       const instance = req?.nextUrl?.pathname ?? "unknown";
-       const method = req?.method ?? "UNKNOWN";
-       const responseId = crypto.randomUUID();
+    } catch (error) {
+      const instance = req?.nextUrl?.pathname ?? "unknown";
+      const method = req?.method ?? "UNKNOWN";
+      const responseId = crypto.randomUUID();
 
-       if (error instanceof AppError) {
-         Logger.error(`[App Error] ${method} ${instance}`, {
-           responseId,
-           type: error.name,
-           message: error.message,
-           errors: error.errors,
-         });
-         const response = ApiResponse.error(
-           error.message,
-           error.status,
-           error.errors,
-           req,
-         ) as NextResponse;
-         response.headers.set("X-Response-Id", responseId);
-         return response;
-       }
+      if (error instanceof AppError) {
+        Logger.error?.(`[App Error] ${method} ${instance}`, {
+          responseId,
+          type: error.name,
+          message: error.message,
+          errors: error.errors,
+        });
+        const response = ApiResponse.error(
+          error.message,
+          error.status,
+          error.errors,
+          req,
+        ) as NextResponse;
+        response.headers.set("X-Response-Id", responseId);
+        return response;
+      }
 
-       Logger.error(`[Unhandled Error] ${method} ${instance}`, {
-         message: error instanceof Error ? error.message : String(error),
-         stack: error instanceof Error ? error.stack : undefined,
-         responseId,
-       });
+      Logger.error?.(`[Unhandled Error] ${method} ${instance}`, {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        responseId,
+      });
 
-       const response = ApiResponse.error(
-         "Internal server error",
-         500,
-         null,
-         req,
-       ) as NextResponse;
+      const response = ApiResponse.error(
+        "Internal server error",
+        500,
+        null,
+        req,
+      ) as NextResponse;
 
-       response.headers.set("X-Response-Id", responseId);
-       return response;
-     }
+      response.headers.set("X-Response-Id", responseId);
+      return response;
+    }
   };
 }
-
 
 export const withErrorHandler = withHandler;

@@ -73,19 +73,30 @@ export interface InitializePaymentResult {
   currency: FiatCurrency;
 }
 
+export interface ChargeParams {
+  paymentMethodId: string;
+  amount: number;
+  reference: string;
+  currency: FiatCurrency;
+  customerEmail: string;
+  customerName: string;
+}
+
+export interface ChargeResult {
+  reference: string;
+  providerReference: string;
+  status: "success" | "failed";
+  amount: number;
+  fee: number;
+  raw?: unknown;
+}
 
 export interface PaymentProvider {
-  
   disburse(params: DisburseParams): Promise<DisburseResult>;
-
-  
   generateVirtualAccount(orgId: string): Promise<VirtualAccountResult>;
-
-  
   verifyTransaction(reference: string): Promise<VerifyTransactionResult>;
-
-  
   initializePayment(params: InitializePaymentParams): Promise<InitializePaymentResult>;
+  charge(params: ChargeParams): Promise<ChargeResult>;
 }
 
 export type DisburseRequest = DisburseParams;
